@@ -1,8 +1,15 @@
-use chrono::{Datelike, NaiveDate, Utc, Timelike, Local};
-use eframe::egui::{ScrollArea, CentralPanel, ColorImage, Context, TextureOptions, Ui};
+use chrono::{
+    Local, 
+    NaiveDate, 
+    NaiveDateTime, 
+    Datelike,  // Add this for year(), month(), day(), ordinal() methods
+    Timelike,  // For time-related methods
+    Utc
+};
+use eframe::egui::{ColorImage, Context, TextureOptions, Ui};
 use eframe::{App, Frame};
 use std::collections::HashMap;
-use std::error::Error;
+use eframe::egui;
 
 /// Convert a Gregorian date to Julian Day Number (JDN)
 fn gregorian_to_jdn(year: i32, month: i32, day: i32) -> i32 {
@@ -18,47 +25,6 @@ fn mayan_numeral(n: i32) -> char {
         0..=19 => char::from_u32(0x1D2E0 + n as u32).unwrap(),
         _ => '❓', // If out of range, return a placeholder
     }
-}
-
-
-//// Get Tzolk’in Day Glyphs
-fn tzolkin_glyphs() -> HashMap<&'static str, &'static str> {
-  let mut glyphs = HashMap::new();
-  let tzolkin_days = [
-      "Imix", "Ik'", "Ak'b'al", "K'an", "Chikchan",
-      "Kimi", "Manik'", "Lamat", "Muluk", "Ok",
-      "Chuwen", "Eb'", "B'en", "Ix", "Men",
-      "Kib'", "Kab'an", "Etz'nab'", "Kawak", "Ajaw"
-  ];
-  let tzolkin_symbols = [
-      "🐊", "🌬️", "🌑", "🌽", "🐍",
-      "💀", "🖐️", "🌟", "💧", "🐶",
-      "🕷️", "🌾", "🌳", "🦉", "🦅",
-      "🐝", "🌀", "🔪", "⛈️", "👑"
-  ];
-  for i in 0..20 {
-      glyphs.insert(tzolkin_days[i], tzolkin_symbols[i]);
-  }
-  glyphs
-}
-
-//// Get Haab’ Month Glyphs
-fn haab_glyphs() -> HashMap<&'static str, &'static str> {
-  let mut glyphs = HashMap::new();
-  let haab_months = [
-      "Pop", "Wo'", "Sip", "Sotz'", "Sek", "Xul", "Yaxkin", "Mol",
-      "Ch'en", "Yax", "Zac", "Ceh", "Mac", "Kankin", "Muan", "Pax",
-      "Kayab", "Kumk'u", "Wayeb'"
-  ];
-  let haab_symbols = [
-      "📜", "🌊", "🔥", "🦇", "🌱", "💨", "🌞", "🌧️",
-      "🏺", "🌿", "❄️", "🐆", "🎭", "🔥", "🦜", "🎵",
-      "🐢", "🌰", "⚠️"
-  ];
-  for i in 0..19 {
-      glyphs.insert(haab_months[i], haab_symbols[i]);
-  }
-  glyphs
 }
 
 fn long_count(days: i32) -> (i32, i32, i32, i32, i32) {
@@ -102,39 +68,6 @@ fn mayan_ascii_number(n: i32) -> String {
     result
 }
 
-/// Get Long Count Glyphs
-fn long_count_glyphs() -> HashMap<i32, &'static str> {
-  let mut glyphs = HashMap::new();
-  glyphs.insert(0, "🪵");  // Placeholder for Baktun glyph
-  glyphs.insert(1, "🔥");
-  glyphs.insert(2, "💧");
-  glyphs.insert(3, "🌿");
-  glyphs.insert(4, "🌞");
-  glyphs.insert(5, "🌕");
-  glyphs.insert(6, "🌎");
-  glyphs.insert(7, "🐍");
-  glyphs.insert(8, "🌪️");
-  glyphs.insert(9, "⭐");
-  glyphs.insert(10, "🔺");
-  glyphs.insert(11, "🏹");
-  glyphs.insert(12, "🌀");
-  glyphs.insert(13, "🔮");
-  glyphs
-}
-
-/// Get Historical Event Glyphs
-fn historical_glyphs() -> HashMap<&'static str, &'static str> {
-  let mut glyphs = HashMap::new();
-  glyphs.insert("🌎 The Maya creation date (0.0.0.0.0)", "🌀");
-  glyphs.insert("📜 Earliest Long Count Date Found", "📜");
-  glyphs.insert("⚔️ Teotihuacan Influence Over Tikal Begins", "⚔️");
-  glyphs.insert("🏛️ Dynasty of Copán Founded", "🏛️");
-  glyphs.insert("🛑 Tikal Defeated by Calakmul", "🛑");
-  glyphs.insert("👑 King Jasaw Chan K’awiil I Crowned in Tikal", "👑");
-  glyphs.insert("🏰 Toltec-Maya Rule in Chichen Itzá Begins", "🏰");
-  glyphs.insert("🏹 Spanish Conquer the Last Maya City, Tayasal", "🏹");
-  glyphs
-}
 
 // Find a historical Mayan event for the given JDN
 fn historical_event(jdn: i32) -> Option<&'static str> {
@@ -160,6 +93,11 @@ for (e_year, e_month, e_day, desc) in events.iter() {
 }
 
   None
+}
+
+struct TextureCache {
+    tzolkin_textures: HashMap<String, eframe::egui::TextureHandle>,
+    haab_textures: HashMap<String, eframe::egui::TextureHandle>,
 }
 
 /// Tzolk'in Calendar: Yucatec vs. K’iche’ names
@@ -284,7 +222,7 @@ fn next_solstice_or_equinox(year: i32, month: i32, day: i32) -> (&'static str, i
   }
   
   // If past December, return next year's Spring Equinox
-  ("🌸 Spring Equinox", 365 - (today.ordinal() - 79) as i32)
+  ("🌸 Spring Equinox", 365 - (today.month() as i32 * 31 - 79) as i32)
 }
 
 /// Predict next Lunar and Solar Eclipse
@@ -299,25 +237,6 @@ fn next_eclipse(jdn: i32) -> &'static str {
   } else {
       "🌘 No Eclipse Imminent"
   }
-}
-
-/// Check for Historical Mayan Events
-fn historical_events(year: i32, month: i32, day: i32) -> Option<&'static str> {
-  let events = [
-      (292, 1, 1, "📜 Earliest Long Count Date Found"),
-      (378, 1, 16, "🏛️ Teotihuacan Influence Over Tikal Begins"),
-      (682, 6, 3, "👑 King Jasaw Chan K’awiil I Crowned in Tikal"),
-      (869, 12, 1, "🏛️ Tikal Collapses"),
-      (1511, 8, 1, "⚔️ Spanish Make First Contact with the Maya"),
-  ];
-
-  for (e_year, e_month, e_day, desc) in events.iter() {
-      if *e_year == year && *e_month == month && *e_day == day {
-          return Some(desc);
-      }
-  }
-
-  None
 }
 
 // A function to map Tzolk'in names to their respective image file paths.
@@ -347,21 +266,39 @@ fn get_tzolkin_glyphs() -> HashMap<&'static str, &'static str> {
 }
 
 // A function to load Tzolk'in names as texture from image
-fn load_tzolkin_image_as_texture(ctx: &Context, path: &str) -> Result<eframe::egui::TextureHandle, String> {
+fn load_tzolkin_image_as_texture(
+    ctx: &Context,
+    path: &str,
+    texture_cache: &mut TextureCache
+) -> Result<eframe::egui::TextureHandle, String> {
+    // Check if texture is already cached
+    if let Some(texture) = texture_cache.tzolkin_textures.get(path) {
+        return Ok(texture.clone());  // Clone instead of returning reference
+    }
+
+    // If not cached, load the image
     let img = image::open(path).map_err(|e| format!("Failed to open image: {}", e))?;
     let img = img.to_rgba8();
     let (width, height) = img.dimensions();
+    
     if width != 128 || height != 128 {
         return Err(format!(
             "Image dimensions do not match the expected size: got {}x{}, expected 128x128.",
             width, height
         ));
     }
+    
     let color_image = ColorImage::from_rgba_unmultiplied(
         [width as usize, height as usize],
         &img.into_raw(),
     );
-    Ok(ctx.load_texture("Tzolk'in Glyph", color_image, TextureOptions::default()))
+    
+    let texture = ctx.load_texture("Tzolk'in Glyph", color_image, TextureOptions::default());
+    
+    // Cache the texture
+    texture_cache.tzolkin_textures.insert(path.to_string(), texture.clone());
+    
+    Ok(texture)
 }
 
 // A function to map Haab names to their respective image file paths.
@@ -390,174 +327,246 @@ fn get_haab_glyphs() -> HashMap<&'static str, &'static str> {
 }
 
 // A function to load Haab names as texture from image
-fn load_haab_image_as_texture(ctx: &Context, path: &str) -> Result<eframe::egui::TextureHandle, String> {
+fn load_haab_image_as_texture(
+    ctx: &Context,
+    path: &str,
+    texture_cache: &mut TextureCache
+) -> Result<eframe::egui::TextureHandle, String> {
+    // Check if texture is already cached
+    if let Some(texture) = texture_cache.haab_textures.get(path) {
+        return Ok(texture.clone());  // Clone instead of returning reference
+    }
+
+    // If not cached, load the image
     let img = image::open(path).map_err(|e| format!("Failed to open image: {}", e))?;
     let img = img.to_rgba8();
     let (width, height) = img.dimensions();
+    
     if width != 128 || height != 128 {
         return Err(format!(
             "Image dimensions do not match the expected size: got {}x{}, expected 128x128.",
             width, height
         ));
     }
+    
     let color_image = ColorImage::from_rgba_unmultiplied(
         [width as usize, height as usize],
         &img.into_raw(),
     );
-    Ok(ctx.load_texture("Haab Glyph", color_image, TextureOptions::default()))
+    
+    let texture = ctx.load_texture("Tzolk'in Glyph", color_image, TextureOptions::default());
+    
+    // Cache the texture
+    texture_cache.haab_textures.insert(path.to_string(), texture.clone());
+    
+    Ok(texture)
 }
 
 fn ui_example(ui: &mut Ui, ctx: &Context) {
-  let now = Utc::now().date_naive();
-  let year = now.year();
-  let month = now.month() as i32;
-  let day = now.day() as i32;
+    let now = Utc::now().date_naive();
+    let year = now.year();
+    let month = now.month() as i32;
+    let day = now.day() as i32;
 
-  let jdn = gregorian_to_jdn(year, month, day);
-  let days_since_creation = jdn - 584283;
+    let jdn = gregorian_to_jdn(year, month, day);
+    let days_since_creation = jdn - 584283;
 
-  // Long Count Calculation
-  let (baktun, katun, tun, uinal, kin) = long_count(days_since_creation);
+    // Long Count Calculation
+    let (baktun, katun, tun, uinal, kin) = long_count(days_since_creation);
 
-  // Tzolk'in and Haab' Calendar Calculations
-  let tzolkin = tzolkin_date(days_since_creation);
-  let haab = haab_date(days_since_creation);
+    // Tzolk'in and Haab' Calendar Calculations
+    let tzolkin = tzolkin_date(days_since_creation);
+    let haab = haab_date(days_since_creation);
 
-  // Additional Info
-  let moon = moon_phase(jdn);
-  let bearer = year_bearer(jdn);
-  let venus = venus_phase(jdn);
-  let (solstice, days_until) = next_solstice_or_equinox(year, month, day);
-  let eclipse = next_eclipse(jdn);
+    // Additional Info
+    let moon = moon_phase(jdn);
+    let bearer = year_bearer(jdn);
+    let venus = venus_phase(jdn);
+    let (solstice, days_until) = next_solstice_or_equinox(year, month, day);
+    let eclipse = next_eclipse(jdn);
 
-  // Historical Event Lookup
-  let historical = historical_event(jdn);
+    // Historical Event Lookup
+    let historical = historical_event(jdn);
 
-  // UI Layout
-  ui.vertical(|ui| {
-      ui.heading("Mayan Date:");
+    // UI Layout
+    ui.vertical(|ui| {
+        ui.heading("Mayan Date:");
 
-      // Gregorian Date
-      ui.label(format!("📅 Gregorian Date: {}-{:02}-{:02}", year, month, day));
+        // Gregorian Date
+        ui.label(format!("📅 Gregorian Date: {}-{:02}-{:02}", year, month, day));
 
-      // Long Count
-      ui.label(format!("🔢 Long Count: {}.{}.{}.{}.{}", baktun, katun, tun, uinal, kin));
+        // Long Count
+        ui.label(format!("🔢 Long Count: {}.{}.{}.{}.{}", baktun, katun, tun, uinal, kin));
 
-      // Long Count Mayan Unicode Glyphs
-      ui.label(format!(
-          "📜 Long Count (Unicode): {}{}{}{}{}",
-          mayan_numeral(baktun),
-          mayan_numeral(katun),
-          mayan_numeral(tun),
-          mayan_numeral(uinal),
-          mayan_numeral(kin)
-      ));
+        // Long Count Mayan Unicode Glyphs
+        ui.label(format!(
+            "📜 Long Count (Unicode): {}{}{}{}{}",
+            mayan_numeral(baktun),
+            mayan_numeral(katun),
+            mayan_numeral(tun),
+            mayan_numeral(uinal),
+            mayan_numeral(kin)
+        ));
 
-      ui.label("📜 Long Count (ASCII):");
-      ui.monospace(format!("Baktun:\n{}", mayan_ascii_number(baktun)));
-      ui.monospace(format!("Katun:\n{}", mayan_ascii_number(katun)));
-      ui.monospace(format!("Tun:\n{}", mayan_ascii_number(tun)));
-      ui.monospace(format!("Uinal:\n{}", mayan_ascii_number(uinal)));
-      ui.monospace(format!("Kin:\n{}", mayan_ascii_number(kin)));
+        ui.label("📜 Long Count (ASCII):");
+        ui.monospace(format!("Baktun:\n{}", mayan_ascii_number(baktun)));
+        ui.monospace(format!("Katun:\n{}", mayan_ascii_number(katun)));
+        ui.monospace(format!("Tun:\n{}", mayan_ascii_number(tun)));
+        ui.monospace(format!("Uinal:\n{}", mayan_ascii_number(uinal)));
+        ui.monospace(format!("Kin:\n{}", mayan_ascii_number(kin)));
      
-      ui.label("📜 Long Count (Unicode):");
-      ui.label(format!(
-          "{} {} {} {} {}",
-          mayan_numeral(baktun),
-          mayan_numeral(katun),
-          mayan_numeral(tun),
-          mayan_numeral(uinal),
-          mayan_numeral(kin)
-      ));
+        ui.label("📜 Long Count (Unicode):");
+        ui.label(format!(
+            "{} {} {} {} {}",
+            mayan_numeral(baktun),
+            mayan_numeral(katun),
+            mayan_numeral(tun),
+            mayan_numeral(uinal),
+            mayan_numeral(kin)
+        ));
       
-      // Tzolk'in and Haab' Dates
-      ui.label(format!(
-          "🌞 Tzolk'in Date: {} {}",
-          tzolkin.number, tzolkin.yucatec_name
-      ));
-      ui.label(format!(
-          "🌙 Haab' Date: {} {}",
-          haab.day, haab.yucatec_month
-      ));
+        // Tzolk'in and Haab' Dates
+        ui.label(format!(
+            "🌞 Tzolk'in Date: {} {} (K'iche': {})",
+            tzolkin.number, tzolkin.yucatec_name, tzolkin.kiche_name
+        ));
+        ui.label(format!(
+            "🌙 Haab' Date: {} {} (K'iche': {})",
+            haab.day, haab.yucatec_month, haab.kiche_month
+        ));
 
-      // Year Bearer
-      ui.label(format!("🌞 Year Bearer: {}", bearer));
+        // Year Bearer
+        ui.label(format!("🌞 Year Bearer: {}", bearer));
 
-      // Moon Phase
-      ui.label(format!("🌕 Moon Phase: {}", moon));
+        // Moon Phase
+        ui.label(format!("🌕 Moon Phase: {}", moon));
 
-      // Venus Cycle Phase
-      ui.label(format!("✨ Venus Cycle: {}", venus));
+        // Venus Cycle Phase
+        ui.label(format!("✨ Venus Cycle: {}", venus));
 
-      // Solstices/Equinoxes
-      ui.label(format!(
-          "🌓 Next Solstice/Equinox: {} ({} days away)",
-          solstice, days_until
-      ));
+        // Solstices/Equinoxes
+        ui.label(format!(
+            "🌓 Next Solstice/Equinox: {} ({} days away)",
+            solstice, days_until
+        ));
 
-      // Eclipse Prediction
-      ui.label(format!("🌘 Eclipse Prediction: {}", eclipse));
+        // Eclipse Prediction
+        ui.label(format!("🌘 Eclipse Prediction: {}", eclipse));
 
-      // Historical Events
-      if let Some(event) = historical {
-          ui.label(format!("🏛️ Historical Event Today: {}", event));
-      } else {
-          ui.label("📜 No significant historical event today.");
-      }
+        // Historical Events
+        if let Some(event) = historical {
+            ui.label(format!("🏛️ Historical Event Today: {}", event));
+        } else {
+            ui.label("📜 No significant historical event today.");
+        }
 
-      // Add Glyph Images for Tzolk'in and Haab'
-      ui.add_space(8.0);
-      ui.horizontal(|ui| {
-          let tzolkin_glyphs = get_tzolkin_glyphs();
-          if let Some(image_path) = tzolkin_glyphs.get(tzolkin.yucatec_name) {
-              match load_tzolkin_image_as_texture(ctx, image_path) {
-                  Ok(texture) => {
-                      ui.image(&texture);
-                  }
-                  Err(err) => {
-                      ui.label(format!("❌ Failed to load Tzolk'in glyph: {}", err));
-                  }
-              }
-          }
-
-          ui.add_space(16.0);
-
-          let haab_glyphs = get_haab_glyphs();
-          if let Some(image_path) = haab_glyphs.get(haab.yucatec_month) {
-              match load_haab_image_as_texture(ctx, image_path) {
-                  Ok(texture) => {
-                      ui.image(&texture);
-                  }
-                  Err(err) => {
-                      ui.label(format!("❌ Failed to load Haab' glyph: {}", err));
-                  }
-              }
-          } else {
-              ui.label("❌ No Haab' glyph found!");
-          }
-      });
-  });
+        // Glyph rendering with error handling
+        if let Ok(mut calendar) = MayanCalendar::new(ctx) {
+            calendar.render_glyphs(ui, ctx, &tzolkin, &haab);
+        }
+    });
 }
 
+// First, define our structs
 struct MayanCalendar {
     current_time: chrono::NaiveTime,
+    calendar_data: CalendarData,
+    last_calendar_update: chrono::NaiveDateTime,
+    texture_cache: TextureCache,
+}
+
+struct CalendarData {
+    // Long Count components
+    long_count: (i32, i32, i32, i32, i32),  // (baktun, katun, tun, uinal, kin)
+    
+    // Calendar round components
+    tzolkin: TzolkinDate,
+    haab: HaabDate,
+    
+    // Astronomical information
+    moon_phase: String,
+    venus_phase: String,
+    year_bearer: String,
+    
+    // Seasonal information
+    next_solstice: (String, i32),
+    
+    // Eclipse prediction
+    eclipse_status: String,
+    
+    // Historical information
+    historical_event: Option<String>,
+    
+    // Base calendar information
+    gregorian_date: NaiveDate,
+    julian_day_number: i32,
+    days_since_creation: i32,
+}
+
+impl CalendarData {
+fn new(date: NaiveDateTime) -> Self {
+    let naive_date = date.date();  // Convert to NaiveDate
+    let year = naive_date.year();
+    let month = naive_date.month() as i32;
+    let day = naive_date.day() as i32;
+        
+        let jdn = gregorian_to_jdn(year, month, day);
+        let days_since_creation = jdn - 584283;
+        
+        // Calculate Long Count
+        let (baktun, katun, tun, uinal, kin) = long_count(days_since_creation);
+        
+        // Calculate calendar rounds
+        let tzolkin = tzolkin_date(days_since_creation);
+        let haab = haab_date(days_since_creation);
+        
+        // Calculate astronomical info
+        let moon_phase = moon_phase(jdn).to_string();
+        let venus_phase = venus_phase(jdn).to_string();
+        let year_bearer = year_bearer(jdn).to_string();
+        
+        // Calculate seasonal info
+        let (solstice_name, days_until) = next_solstice_or_equinox(year, month, day);
+        
+        // Get eclipse prediction
+        let eclipse_status = next_eclipse(jdn).to_string();
+        
+        // Check for historical events
+        let historical_event = historical_event(jdn).map(String::from);
+        
+        Self {
+            long_count: (baktun, katun, tun, uinal, kin),
+            tzolkin,
+            haab,
+            moon_phase,
+            venus_phase,
+            year_bearer,
+            next_solstice: (solstice_name.to_string(), days_until),
+            eclipse_status,
+            historical_event,
+            gregorian_date: date.date(),
+            julian_day_number: jdn,
+            days_since_creation,
+        }
+    }
 }
 
 impl MayanCalendar {
-    // Changed error type to be Send + Sync
-    fn new(_ctx: &Context) -> Result<Self, Box<dyn Error + Send + Sync>> {
+    // New method to create an instance
+    fn new(_ctx: &Context) -> Result<Self, Box<dyn std::error::Error>> {
+        let now = Local::now();
         Ok(Self {
-            current_time: Local::now().time(),
+            current_time: now.time(),
+            calendar_data: CalendarData::new(now.naive_local()),
+            last_calendar_update: now.naive_local(),
+            texture_cache: TextureCache {
+                tzolkin_textures: HashMap::new(),
+                haab_textures: HashMap::new(),
+            },
         })
     }
 
-    fn render(&mut self, ui: &mut Ui, ctx: &Context) {
-        ui.vertical(|ui| {
-            self.render_clock_side(ui);
-            ui_example(ui, ctx);
-        });
-    }
-
+    // Clock side rendering method
     fn render_clock_side(&self, ui: &mut Ui) {
         ui.vertical(|ui| {
             ui.heading(format!(
@@ -568,52 +577,110 @@ impl MayanCalendar {
             ));
         });
     }
-}
 
-impl App for MayanCalendar {
-    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        self.current_time = Local::now().time();
+    // Update calendar if the date has changed
+    fn update_calendar_if_needed(&mut self) {
+        let now = Local::now().naive_local();
+        if now.date() != self.last_calendar_update.date() {
+            self.calendar_data = CalendarData::new(now);
+            self.last_calendar_update = now;
+        }
+    }
 
-        CentralPanel::default().show(ctx, |ui| {
-            ScrollArea::vertical().show(ui, |ui| {
-                self.render(ui, ctx);
-            });
+    fn render_glyphs(&mut self, ui: &mut Ui, ctx: &Context, tzolkin: &TzolkinDate, haab: &HaabDate) {
+        ui.horizontal(|ui| {
+            let tzolkin_glyphs = get_tzolkin_glyphs();
+            if let Some(image_path) = tzolkin_glyphs.get(tzolkin.yucatec_name) {
+                match load_tzolkin_image_as_texture(ctx, image_path, &mut self.texture_cache) {
+                    Ok(texture) => {
+                        ui.image(&texture);
+                    }
+                    Err(err) => {
+                        ui.label(format!("❌ Failed to load Tzolk'in glyph: {}", err));
+                    }
+                }
+            }
+
+            ui.add_space(16.0);
+
+            let haab_glyphs = get_haab_glyphs();
+            if let Some(image_path) = haab_glyphs.get(haab.yucatec_month) {
+                match load_haab_image_as_texture(ctx, image_path, &mut self.texture_cache) {
+                    Ok(texture) => {
+                        ui.image(&texture);
+                    }
+                    Err(err) => {
+                        ui.label(format!("❌ Failed to load Haab' glyph: {}", err));
+                    }
+                }
+            }
         });
-
-        ctx.request_repaint();
     }
 }
 
-fn configure_fonts(ctx: &egui::Context) {
-    use eframe::egui::{FontDefinitions, FontFamily, FontData};
-    use std::sync::Arc;
-
-    let mut fonts = FontDefinitions::default();
-
-    // Add a fallback font that supports Mayan Unicode (e.g., Noto Sans Symbols)
-    fonts.font_data.insert(
-        "NotoSansSymbols".to_string(),
-        Arc::new(FontData::from_static(include_bytes!(
-            "C:/Users/phine/Documents/GitHub/mayan_calendar/src/fonts/NotoSansMayanNumerals-Regular.ttf" // Update to the path of your font file
-        ))),
-    );
-
-    // Use the new font for both Proportional and Monospace families
-    fonts
-        .families
-        .entry(FontFamily::Proportional)
-        .or_default()
-        .insert(0, "NotoSansSymbols".to_string());
-    fonts
-        .families
-        .entry(FontFamily::Monospace)
-        .or_default()
-        .insert(0, "NotoSansSymbols".to_string());
-
-    ctx.set_fonts(fonts);
+// Implement the App trait
+impl App for MayanCalendar {
+  fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+      // Get the current time
+      let now = Instant::now();
+      
+      // Check if a second has elapsed since the last update
+      if now.duration_since(self.last_update).as_secs() >= 1 {
+          // Update the current time
+          self.current_time = Local::now().time();
+          
+          // Update the last update time
+          self.last_update = now;
+          
+          // Update calendar if needed
+          self.update_calendar_if_needed();
+          
+          // Request a repaint
+          ctx.request_repaint();
+      }
+        
+        // Create the main window
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                // Clock display
+                self.render_clock_side(ui);
+                
+                // Calendar display
+                ui_example(ui, ctx);
+            });
+        });
+    }
 }
 
-fn main() -> Result<(), eframe::Error> {  // Changed return type to match eframe
+fn configure_fonts(ctx: &eframe::egui::Context) {
+  use eframe::egui::{FontDefinitions, FontFamily, FontData};
+  use std::sync::Arc;
+  
+  let mut fonts = FontDefinitions::default();
+  
+  let font_bytes = include_bytes!("fonts/NotoSansMayanNumerals-Regular.ttf");
+  
+  fonts.font_data.insert(
+      "NotoSansMayanNumerals".to_string(),
+      Arc::new(FontData::from_static(font_bytes))
+  );
+
+  // Rest of the configuration...
+  fonts
+      .families
+      .entry(FontFamily::Proportional)
+      .or_default()
+      .insert(0, "NotoSansMayanNumerals".to_string());
+  fonts
+      .families
+      .entry(FontFamily::Monospace)
+      .or_default()
+      .insert(0, "NotoSansMayanNumerals".to_string());
+
+  ctx.set_fonts(fonts);
+}
+
+fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_inner_size([800.0, 600.0]),
@@ -624,18 +691,23 @@ fn main() -> Result<(), eframe::Error> {  // Changed return type to match eframe
         "Mayan Calendar",
         options,
         Box::new(|cc| {
-            // Using match for better error handling
+            configure_fonts(&cc.egui_ctx);
+            
             match MayanCalendar::new(&cc.egui_ctx) {
-                Ok(app) => Ok(Box::new(app)),
-                Err(e) => {
-                    eprintln!("Failed to create app: {}", e);
-                    // If creation fails, we still need to return a Box<dyn App>
-                    // Here we could return a simple error screen app instead
+                Ok(app) => Ok(Box::new(app) as Box<dyn App>),
+                Err(_) => {
+                    let now = Local::now();
                     Ok(Box::new(MayanCalendar {
-                        current_time: Local::now().time(),
-                    }))
+                        current_time: now.time(),
+                        calendar_data: CalendarData::new(now.naive_local()),
+                        last_calendar_update: now.naive_local(),
+                        texture_cache: TextureCache {
+                            tzolkin_textures: HashMap::new(),
+                            haab_textures: HashMap::new(),
+                        },
+                    }) as Box<dyn App>)
                 }
             }
-        }),
+        })
     )
 }

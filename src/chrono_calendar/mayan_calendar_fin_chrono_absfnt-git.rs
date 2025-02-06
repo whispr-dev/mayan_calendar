@@ -3,6 +3,7 @@ use eframe::egui::{ScrollArea, CentralPanel, ColorImage, Context, TextureOptions
 use eframe::{App, Frame};
 use std::collections::HashMap;
 use std::error::Error;
+use eframe::{self};  // Remove run_native since we're using the full path
 
 /// Convert a Gregorian date to Julian Day Number (JDN)
 fn gregorian_to_jdn(year: i32, month: i32, day: i32) -> i32 {
@@ -18,47 +19,6 @@ fn mayan_numeral(n: i32) -> char {
         0..=19 => char::from_u32(0x1D2E0 + n as u32).unwrap(),
         _ => '❓', // If out of range, return a placeholder
     }
-}
-
-
-//// Get Tzolk’in Day Glyphs
-fn tzolkin_glyphs() -> HashMap<&'static str, &'static str> {
-  let mut glyphs = HashMap::new();
-  let tzolkin_days = [
-      "Imix", "Ik'", "Ak'b'al", "K'an", "Chikchan",
-      "Kimi", "Manik'", "Lamat", "Muluk", "Ok",
-      "Chuwen", "Eb'", "B'en", "Ix", "Men",
-      "Kib'", "Kab'an", "Etz'nab'", "Kawak", "Ajaw"
-  ];
-  let tzolkin_symbols = [
-      "🐊", "🌬️", "🌑", "🌽", "🐍",
-      "💀", "🖐️", "🌟", "💧", "🐶",
-      "🕷️", "🌾", "🌳", "🦉", "🦅",
-      "🐝", "🌀", "🔪", "⛈️", "👑"
-  ];
-  for i in 0..20 {
-      glyphs.insert(tzolkin_days[i], tzolkin_symbols[i]);
-  }
-  glyphs
-}
-
-//// Get Haab’ Month Glyphs
-fn haab_glyphs() -> HashMap<&'static str, &'static str> {
-  let mut glyphs = HashMap::new();
-  let haab_months = [
-      "Pop", "Wo'", "Sip", "Sotz'", "Sek", "Xul", "Yaxkin", "Mol",
-      "Ch'en", "Yax", "Zac", "Ceh", "Mac", "Kankin", "Muan", "Pax",
-      "Kayab", "Kumk'u", "Wayeb'"
-  ];
-  let haab_symbols = [
-      "📜", "🌊", "🔥", "🦇", "🌱", "💨", "🌞", "🌧️",
-      "🏺", "🌿", "❄️", "🐆", "🎭", "🔥", "🦜", "🎵",
-      "🐢", "🌰", "⚠️"
-  ];
-  for i in 0..19 {
-      glyphs.insert(haab_months[i], haab_symbols[i]);
-  }
-  glyphs
 }
 
 fn long_count(days: i32) -> (i32, i32, i32, i32, i32) {
@@ -102,39 +62,6 @@ fn mayan_ascii_number(n: i32) -> String {
     result
 }
 
-/// Get Long Count Glyphs
-fn long_count_glyphs() -> HashMap<i32, &'static str> {
-  let mut glyphs = HashMap::new();
-  glyphs.insert(0, "🪵");  // Placeholder for Baktun glyph
-  glyphs.insert(1, "🔥");
-  glyphs.insert(2, "💧");
-  glyphs.insert(3, "🌿");
-  glyphs.insert(4, "🌞");
-  glyphs.insert(5, "🌕");
-  glyphs.insert(6, "🌎");
-  glyphs.insert(7, "🐍");
-  glyphs.insert(8, "🌪️");
-  glyphs.insert(9, "⭐");
-  glyphs.insert(10, "🔺");
-  glyphs.insert(11, "🏹");
-  glyphs.insert(12, "🌀");
-  glyphs.insert(13, "🔮");
-  glyphs
-}
-
-/// Get Historical Event Glyphs
-fn historical_glyphs() -> HashMap<&'static str, &'static str> {
-  let mut glyphs = HashMap::new();
-  glyphs.insert("🌎 The Maya creation date (0.0.0.0.0)", "🌀");
-  glyphs.insert("📜 Earliest Long Count Date Found", "📜");
-  glyphs.insert("⚔️ Teotihuacan Influence Over Tikal Begins", "⚔️");
-  glyphs.insert("🏛️ Dynasty of Copán Founded", "🏛️");
-  glyphs.insert("🛑 Tikal Defeated by Calakmul", "🛑");
-  glyphs.insert("👑 King Jasaw Chan K’awiil I Crowned in Tikal", "👑");
-  glyphs.insert("🏰 Toltec-Maya Rule in Chichen Itzá Begins", "🏰");
-  glyphs.insert("🏹 Spanish Conquer the Last Maya City, Tayasal", "🏹");
-  glyphs
-}
 
 // Find a historical Mayan event for the given JDN
 fn historical_event(jdn: i32) -> Option<&'static str> {
@@ -301,25 +228,6 @@ fn next_eclipse(jdn: i32) -> &'static str {
   }
 }
 
-/// Check for Historical Mayan Events
-fn historical_events(year: i32, month: i32, day: i32) -> Option<&'static str> {
-  let events = [
-      (292, 1, 1, "📜 Earliest Long Count Date Found"),
-      (378, 1, 16, "🏛️ Teotihuacan Influence Over Tikal Begins"),
-      (682, 6, 3, "👑 King Jasaw Chan K’awiil I Crowned in Tikal"),
-      (869, 12, 1, "🏛️ Tikal Collapses"),
-      (1511, 8, 1, "⚔️ Spanish Make First Contact with the Maya"),
-  ];
-
-  for (e_year, e_month, e_day, desc) in events.iter() {
-      if *e_year == year && *e_month == month && *e_day == day {
-          return Some(desc);
-      }
-  }
-
-  None
-}
-
 // A function to map Tzolk'in names to their respective image file paths.
 fn get_tzolkin_glyphs() -> HashMap<&'static str, &'static str> {
     let mut glyphs = HashMap::new();
@@ -472,12 +380,12 @@ fn ui_example(ui: &mut Ui, ctx: &Context) {
       
       // Tzolk'in and Haab' Dates
       ui.label(format!(
-          "🌞 Tzolk'in Date: {} {}",
-          tzolkin.number, tzolkin.yucatec_name
+          "🌞 Tzolk'in Date: {} {} (K'iche': {})",
+          tzolkin.number, tzolkin.yucatec_name, tzolkin.kiche_name
       ));
       ui.label(format!(
-          "🌙 Haab' Date: {} {}",
-          haab.day, haab.yucatec_month
+          "🌙 Haab' Date: {} {} (K'iche': {})",
+           haab.day, haab.yucatec_month, haab.kiche_month
       ));
 
       // Year Bearer
@@ -584,58 +492,57 @@ impl App for MayanCalendar {
     }
 }
 
-fn configure_fonts(ctx: &egui::Context) {
-    use eframe::egui::{FontDefinitions, FontFamily, FontData};
-    use std::sync::Arc;
+fn configure_fonts(ctx: &eframe::egui::Context) {
+  use eframe::egui::{FontDefinitions, FontFamily, FontData};
+  use std::sync::Arc;
+  
+  let mut fonts = FontDefinitions::default();
+  
+  let font_bytes = include_bytes!("fonts/NotoSansMayanNumerals-Regular.ttf");
+  
+  fonts.font_data.insert(
+      "NotoSansMayanNumerals".to_string(),
+      Arc::new(FontData::from_static(font_bytes))
+  );
 
-    let mut fonts = FontDefinitions::default();
+  // Rest of the configuration...
+  fonts
+      .families
+      .entry(FontFamily::Proportional)
+      .or_default()
+      .insert(0, "NotoSansMayanNumerals".to_string());
+  fonts
+      .families
+      .entry(FontFamily::Monospace)
+      .or_default()
+      .insert(0, "NotoSansMayanNumerals".to_string());
 
-    // Add a fallback font that supports Mayan Unicode (e.g., Noto Sans Symbols)
-    fonts.font_data.insert(
-        "NotoSansSymbols".to_string(),
-        Arc::new(FontData::from_static(include_bytes!(
-            "C:/Users/phine/Documents/GitHub/mayan_calendar/src/fonts/NotoSansMayanNumerals-Regular.ttf" // Update to the path of your font file
-        ))),
-    );
-
-    // Use the new font for both Proportional and Monospace families
-    fonts
-        .families
-        .entry(FontFamily::Proportional)
-        .or_default()
-        .insert(0, "NotoSansSymbols".to_string());
-    fonts
-        .families
-        .entry(FontFamily::Monospace)
-        .or_default()
-        .insert(0, "NotoSansSymbols".to_string());
-
-    ctx.set_fonts(fonts);
+  ctx.set_fonts(fonts);
 }
 
-fn main() -> Result<(), eframe::Error> {  // Changed return type to match eframe
+fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_inner_size([800.0, 600.0]),
         ..Default::default()
     };
 
+    // Now we can either use the fully qualified path:
     eframe::run_native(
         "Mayan Calendar",
         options,
         Box::new(|cc| {
-            // Using match for better error handling
+            configure_fonts(&cc.egui_ctx);
+            
             match MayanCalendar::new(&cc.egui_ctx) {
                 Ok(app) => Ok(Box::new(app)),
                 Err(e) => {
                     eprintln!("Failed to create app: {}", e);
-                    // If creation fails, we still need to return a Box<dyn App>
-                    // Here we could return a simple error screen app instead
                     Ok(Box::new(MayanCalendar {
                         current_time: Local::now().time(),
                     }))
                 }
             }
-        }),
+        })
     )
 }
