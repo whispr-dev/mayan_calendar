@@ -1,0 +1,22 @@
+Ah, this is an exciting moment! Before we hit cargo run, let me walk you through what to expect and how to interpret what happens:
+When you run the program, a few things will happen in sequence:
+
+First, the program will initialize its logging system. You should see some startup messages in your terminal showing the logging configuration.
+Then it will attempt to load the font files and glyphs. This is a potential point where you might see errors if:
+
+The font file "NotoSansMayanNumerals-Regular.ttf" isn't in the expected assets/fonts/ directory
+The glyph image files aren't in the correct paths as specified in config.rs
+
+
+Next, it will create the main window using eframe. You should see a window appear with:
+
+A clock display at the top
+The Long Count calendar display
+Tzolk'in and Haab' dates with their corresponding glyphs (if loaded)
+Astronomical information panel
+Historical events (if any correspond to today's date)
+
+
+
+If you encounter any errors, don't worry! That's completely normal when running a complex program for the first time. Let me know what happens and I can help interpret any error messages or unexpected behavior we see.
+Would you like to try running it now? Remember to have your terminal in the project directory when you run cargo run!
